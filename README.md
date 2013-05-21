@@ -1,5 +1,7 @@
 # Gioc
 
+[![Build Status](https://secure.travis-ci.org/goliatone/gioc.png)](http://travis-ci.org/goliatone/gioc)
+
 Simple and tiny IOC module.
 
 ## Getting Started
