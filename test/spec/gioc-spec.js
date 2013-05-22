@@ -14,13 +14,22 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             expect(gioc).toBeTruthy();
         });
 
-        it('Gioc shold initialize', function() {
+        it('Gioc shold contain known methods.', function() {
             var gioc = new Gioc();
-            var output   = gioc.init();
-            var expected = 'This is just a stub!';
-            expect(output).toEqual(expected);
+            var methods = ['addFactory', 'addInstance', 'solveKey', 'inject', 'solveMappings'];
+            var method;
+            for(var m in methods){
+                method = methods[m];
+                expect((method in gioc)).toBeTruthy();
+                expect((typeof gioc[method] === 'function')).toBeTruthy();
+            }
         });
-        
-    });
 
+        it('Gioc should add factories',function(){
+            var factory = function(){return 'im a factory';};
+            var gioc  = new Gioc();
+            gioc.addFactory('f', factory);
+            expect(gioc.hasInjector('f')).toBeTruthy();
+        });
+    });
 });

@@ -22,7 +22,18 @@ define('gioc', function() {
      */
     Gioc.prototype.addFactory = function(key, factory){
         this.factories[key] = factory;
+        return this;
     };
+
+    /**
+     * [ description]
+     * @param  {[type]} key [description]
+     * @return {[type]}     [description]
+     */
+    Gioc.prototype.hasInjector = function(key){
+        return (key in this.instances || key in this.factories);
+    };
+
 
     /**
      * Add instance to Gioc.
@@ -31,6 +42,7 @@ define('gioc', function() {
      */
     Gioc.prototype.addInstance = function (key, instance) {
         this.instances[key] = instance;
+        return this;
     };
 
     /**
@@ -67,6 +79,8 @@ define('gioc', function() {
 
         if(post && typeof post === 'function')
             post.call(scope, postArgs);
+
+        return this;
     };
 
     /**
@@ -83,6 +97,8 @@ define('gioc', function() {
             this.inject(scope, mapping.key, mapping.setter, mapping.post, mapping.postArgs);
         }
         post.apply(scope, args);
+
+        return this;
     };
 
     return Gioc;
