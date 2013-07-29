@@ -9,6 +9,11 @@
 /* jshint strict: false */
 define('gioc', function() {
 
+    /**
+     * [ description]
+     * @param  {[type]} config [description]
+     * @return {[type]}        [description]
+     */
     var Gioc = function(config){
         // this.services = {};
 		this.instances = {};
