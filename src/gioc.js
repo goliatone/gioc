@@ -125,15 +125,9 @@ define('gioc', function() {
         //Solve dependencies: each individual dependency can be:
         // a)id => bean id 
         // b)object {id:id, options:options}
-        if(this.depsKey in config){
-            config[this.depsKey].forEach((function(bean){
-                //Normalize bean def, if string, we ride on defaults.                
-                if(typeof bean === 'string') bean = {id:bean, options:{setter:bean}};
-                //We should try catch this.
-                this.inject(target, bean.id, bean.options);
-            }).bind(this));
-            console.log(this.solve(config.deps[0]));
-        }
+        // We need to track dependencies. pass id around. Push it to parents:[id, id2]
+        // if dependency in parents = throw up!
+        if(this.depsKey in config) this.solveDependencies(target, config[this.depsKey]);
 
         return target;
     };
@@ -147,6 +141,9 @@ define('gioc', function() {
      * @return {[type]}        [description]
      */
     Gioc.prototype.inject = function (scope, key, options) {
+        //TODO: We should want to handle this differently
+        if(! this.mapped(key)) return this;
+
         var setter = options.setter || key,
             value  = this.solve(key, options);
 
@@ -167,39 +164,20 @@ define('gioc', function() {
         return (key in this.beans);
     };
 
-
     /**
-     * Returns an instance by ID
-     * @param  {[type]} key [description]
-     * @return {[type]}     [description]
-     */
-    Gioc.prototype.solveKey = function (key) {
-        var instance = this.instances[key];
-
-        if (!instance) {
-            var _Factory = this.factories[key];
-            instance = _Factory();
-            this.addInstance(key, instance);
-        }
-
-        return instance;
-    };
-
-
-    /**
-     * [solveMappings description]
+     * [solveDependencies description]
      * @param  {[type]} scope    [description]
      * @param  {[type]} mappings [description]
      * @param  {[type]} post     [description]
      * @return {[type]}          [description]
      */
-    Gioc.prototype.solveMappings = function(scope, mappings, post){
-        var mapping, args= Array.prototype.splice.call(arguments,3);
-        for( var i = 0, t = mappings.length; i<t; i++){
-            mapping = mappings[i];
-            this.inject(scope, mapping.key, mapping.setter, mapping.post, mapping.postArgs);
-        }
-        post.apply(scope, args);
+    Gioc.prototype.solveDependencies = function(scope, mappings){
+        mappings.forEach((function(bean){
+            //Normalize bean def, if string, we ride on defaults.                
+            if(typeof bean === 'string') bean = {id:bean, options:{setter:bean}};
+            //We should try catch this.
+            this.inject(scope, bean.id, bean.options);
+        }).bind(this));
 
         return this;
     };
