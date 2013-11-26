@@ -55,6 +55,12 @@ define('gioc', function() {
         this.depsKey = 'deps';
         this.propKey = 'props';
 
+        //Solvers methods should have a common signature:
+        //id, target, options (which should be similar throught all methods)
+        this.solvers = {};
+        this.solvers[this.depsKey] = this.solveDependencies;
+        this.solvers[this.propKey] = _extend;
+
         this.instances = {};
         this.factories = {};
     };
