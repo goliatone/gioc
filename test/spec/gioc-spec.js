@@ -16,7 +16,7 @@ define(['gioc', 'jquery'], function(Gioc, $) {
 
         it('Gioc shold contain known methods.', function() {
             var gioc = new Gioc();
-            var methods = ['addFactory', 'addInstance', 'solveKey', 'inject', 'solveMappings'];
+            var methods = ['map', 'solve', 'build', 'wire', 'inject', 'mapped', 'solveDependencies'];
             var method;
             for(var m in methods){
                 method = methods[m];
@@ -28,8 +28,8 @@ define(['gioc', 'jquery'], function(Gioc, $) {
         it('Gioc should add factories',function(){
             var factory = function(){return 'im a factory';};
             var gioc  = new Gioc();
-            gioc.addFactory('f', factory);
-            expect(gioc.hasInjector('f')).toBeTruthy();
+            gioc.map('f', factory);
+            expect(gioc.mapped('f')).toBeTruthy();
         });
     });
 });
