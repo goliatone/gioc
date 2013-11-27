@@ -27,7 +27,7 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	gioc.map('User', User,{});
 
 	gioc.map('ajax', function(){return new Ajax;},{
-		deps:['user']
+		// deps:['user']
 	});
 	gioc.map('sync', function(options){
 		return new Sync;
