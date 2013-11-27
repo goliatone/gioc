@@ -61,7 +61,18 @@ define('gioc', function() {
         this.solvers[this.depsKey] = this.solveDependencies;
         this.solvers[this.propKey] = _extend;
 
+        this.addSolver(this.propKey, this._extend);
+        this.addSolver(this.depsKey, this.solveDependencies);
     };
+
+    Gioc.prototype.addSolver = function(key, solver){
+        (this.solvers[key] || (this.solvers[key] = [])).push(solver);
+        // this.getSolver(key).push(solver);
+    };
+
+    Gioc.prototype.getSolver = function(key){
+        return 
+    }
 
 
 ////////////////////////////////////////
@@ -101,19 +112,15 @@ define('gioc', function() {
 
     Gioc.prototype.build = function(key, options){
         var bean   = this.beans[key],
-            value  = bean.load,
-            config = _extend({}, bean.config, options);
-            this.log('build, generated config ', config);
-        //TODO: Do we want to cache? Or we handle that 
-        //on the factory?
-        if(bean.construct){
-            var args   = config.args,
-                scope  = config.scope;
+            value  = bean.load;
+       
+        if(! bean.construct) return value;
+    
+        var config = _extend({}, bean.config, options),
+            args   = config.args,
+            scope  = config.scope;
 
-            //TODO: Make sure that undefined scope and args
-            //does not break anything
-            value = value.apply(scope, args);           
-        }
+        value = value.apply(scope, args);           
 
         return value;
     };
@@ -131,12 +138,7 @@ define('gioc', function() {
         //We need a collection of key to handler, and iterate over
         if(this.propKey in config) _extend(target, config[this.propKey]);
 
-        //Solve dependencies: each individual dependency can be:
-        // a)id => bean id 
-        // b)object {id:id, options:options}
-        // We need to track dependencies. pass id around. 
-        // Push it to parents:[id, id2]
-        // if dependency in parents = throw up!
+        //
         if(this.depsKey in config) 
             this.solveDependencies(key, target, config[this.depsKey]);
 
@@ -186,6 +188,8 @@ define('gioc', function() {
     Gioc.prototype.mapped = function(key){
         return (key in this.beans);
     };
+
+
 
     /**
      * Solve an array of dependencies.
