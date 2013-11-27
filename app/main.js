@@ -46,12 +46,14 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	}, {
 		factoryOptions:true, 
 		deps:['userid',
-			  {id:'sync', 
-			  options:{
-			  	props:{url:'localhost'}
-			  }
+			{id:'sync', 
+			options:{
+			  	props:{url:'localhost'},			 
+				post:function(){
+					console.log('************ hello sync ', this, arguments);
+				}
 			}
-		]
+		}]
 	});
 
 	console.log('Beans ', gioc.beans);
@@ -63,4 +65,5 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	console.log('User pepe ', pepe);
 
 	window.pepe = pepe;
+	window.gioc = gioc;
 });
