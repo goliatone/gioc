@@ -31,5 +31,25 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             gioc.map('f', factory);
             expect(gioc.mapped('f')).toBeTruthy();
         });
+
+        it('should store literal values',function(){
+            var gioc = new Gioc();
+            gioc.map('literal', 23);
+            expect(gioc.solve('literal')).toBe(23);
+        });
+
+        it('should build from a given key', function(){
+            var gioc = new Gioc();
+            gioc.map('literal', 23);
+            expect(gioc.build('literal')).toBe(23);
+        });
+
+        it('should handle factory methods', function(){
+            var gioc = new Gioc();
+            gioc.map('factory', function(){
+                return 23;
+            });
+            expect(gioc.solve('factory')).toBe(23);
+        });
     });
 });
