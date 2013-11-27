@@ -43,9 +43,9 @@ define('gioc', function() {
 ////////////////////////////////////////
 
     /**
-     * [ description]
-     * @param  {[type]} config [description]
-     * @return {[type]}        [description]
+     * Gioc constructor.
+     * 
+     * @param  {Object} config Optional config object.
      */
     var Gioc = function(config){
         //Store all bean info.
@@ -61,14 +61,13 @@ define('gioc', function() {
         this.solvers[this.depsKey] = this.solveDependencies;
         this.solvers[this.propKey] = _extend;
 
-        this.instances = {};
-        this.factories = {};
     };
 
 
 ////////////////////////////////////////
 /// PUBLIC METHODS
 ////////////////////////////////////////
+
     Gioc.prototype.map = function(key, payload, config){
         //Store basic information of our payload.
         var bean = {key:key, load:payload, config:(config || {})};
@@ -87,12 +86,15 @@ define('gioc', function() {
         var value  = null,
             bean   = this.beans[key],
             config = _extend({}, bean.config, options);
-        console.log('==> solve, generated config ', config);
+        this.log('==> solve, generated config ', config);
         //build our value.
         value = this.build(key, config);
 
         //configure our value
-        value = this.wire(value, config);
+        value = this.wire(key, value, config);
+
+        //do all post 'construct' operations.
+        this.post(key, value, config);
 
         return value;
     };
@@ -101,7 +103,7 @@ define('gioc', function() {
         var bean   = this.beans[key],
             value  = bean.load,
             config = _extend({}, bean.config, options);
-            console.log('build, generated config ', config);
+            this.log('build, generated config ', config);
         //TODO: Do we want to cache? Or we handle that 
         //on the factory?
         if(bean.construct){
@@ -117,9 +119,10 @@ define('gioc', function() {
     };
 
     //Meant to be overriden with use.
-    Gioc.prototype.wire = function(target, config){
+    Gioc.prototype.wire = function(key, target, config){
         config = config || {};
-        console.log('Wiring: ', target, config, typeof target === 'object', 'modifier' in config);
+        this.log('Wiring: ', target, config, 
+            typeof target === 'object', 'modifier' in config);
         
         //We have a literal value. We might want to modify it?
         if(typeof target !== 'object' && 'modifier' in config)
@@ -131,9 +134,11 @@ define('gioc', function() {
         //Solve dependencies: each individual dependency can be:
         // a)id => bean id 
         // b)object {id:id, options:options}
-        // We need to track dependencies. pass id around. Push it to parents:[id, id2]
+        // We need to track dependencies. pass id around. 
+        // Push it to parents:[id, id2]
         // if dependency in parents = throw up!
-        if(this.depsKey in config) this.solveDependencies(target, config[this.depsKey]);
+        if(this.depsKey in config) 
+            this.solveDependencies(key, target, config[this.depsKey]);
 
         return target;
     };
@@ -146,46 +151,81 @@ define('gioc', function() {
      * @param  {[type]} post   [description]
      * @return {[type]}        [description]
      */
-    Gioc.prototype.inject = function (scope, key, options) {
+    Gioc.prototype.inject = function (key, scope, options) {
         //TODO: We should want to handle this differently
         if(! this.mapped(key)) return this;
 
         var setter = options.setter || key,
             value  = this.solve(key, options);
 
+        //It could be that we were unable to solve for key, how do 
+        //we handle it? Do we break the whole chain?
+        if(value === undefined) return this;
+
         if(typeof setter === 'function') scope.call(scope, value, key);
         else if( typeof setter === 'string') scope[setter] = value;
 
+        //TODO: We should treat this as an array
         if('post' in options) options.post.apply(scope, options.postArgs);
 
         return this;
     };
 
+    Gioc.prototype.post = function(key, value, options){
+        this.log('TODO', 'handle post collections');
+    };
+
     /**
-     * [ description]
-     * @param  {[type]} key [description]
-     * @return {[type]}     [description]
+     * Checks to see if *key* is currently
+     * mapped.
+     * 
+     * @param  {String} key Definition id.
+     * @return {Boolean}    Does a definition
+     *                      with this key exist?
      */
     Gioc.prototype.mapped = function(key){
         return (key in this.beans);
     };
 
     /**
-     * [solveDependencies description]
-     * @param  {[type]} scope    [description]
-     * @param  {[type]} mappings [description]
-     * @param  {[type]} post     [description]
-     * @return {[type]}          [description]
+     * Solve an array of dependencies.
+     * 
+     * @param  {Object} scope    Scope to which dependencies
+     *                           will be applied to.
+     * @param  {[type]} mappings Array contained deps. 
+     *                           definitions
+     * @return {Gioc}
      */
-    Gioc.prototype.solveDependencies = function(scope, mappings){
+    Gioc.prototype.solveDependencies = function(key, scope, mappings){
+        (this.graph = this.graph || {}) && (this.graph[key]=key);
+
         mappings.forEach((function(bean){
             //Normalize bean def, if string, we ride on defaults.                
-            if(typeof bean === 'string') bean = {id:bean, options:{setter:bean}};
-            //We should try catch this.
-            this.inject(scope, bean.id, bean.options);
-        }).bind(this));
+            if(typeof bean === 'string') 
+                bean = {id:bean, options:{setter:bean}};
 
+            //Catch circular dependency
+            if(bean.id in this.graph) 
+                return this.error(key, 'ERROR');
+            
+            //store current bean id for CD.
+            this.graph[bean.id] = key;
+            //We should try catch this.
+            this.inject(bean.id, scope, bean.options);
+            //Bean resolved, move on.
+            delete this.graph[bean.id];
+
+        }).bind(this));
+        this.log(key, this.graph)
         return this;
+    };
+
+    Gioc.prototype.error = function(key, message){
+        throw new Error(key, message);
+    };
+
+    Gioc.prototype.log = function(key, message){
+        console.log.apply(console, ['KEY: ', key, message]);
     };
 
     return Gioc;
