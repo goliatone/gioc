@@ -10,9 +10,12 @@ requirejs.config({
 define(['gioc', 'jquery'], function (Gioc, $) {
     console.log('Loading');
 
+    var Ajax = function(){};
+
     var Sync = function(){};
     Sync.prototype.pull = function(){
     	console.log('Sync: ', this.url);
+    	return this;
     };
 
     var User = function(){};
@@ -23,14 +26,19 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	var gioc = new Gioc();
 	gioc.map('User', User,{});
 
+	gioc.map('ajax', function(){return new Ajax;},{
+		deps:['user']
+	});
 	gioc.map('sync', function(options){
 		return new Sync;
-	},{});
+	},{deps:['ajax']});
 
-	gioc.map('userid', 123456789, {modifier:function(id){
-		console.log('modifier ', id);
-		return Math.round(id / 100000);
-	}});
+	gioc.map('userid', 123456789, {
+		modifier:function(id){
+			console.log('modifier ', id);
+			return Math.round(id / 100000);
+		}
+	});
 
 	gioc.map('user', function(options){
 		console.log('user factory: ', this, options);
