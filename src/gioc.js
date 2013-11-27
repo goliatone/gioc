@@ -43,7 +43,10 @@ define('gioc', function() {
         
         //This should prob have a different signature, addPost?
         this.editors = [];
-        this.addPost(this.resetGraph)
+        this.addPost(this.resetGraph);
+
+        this.providers = [];
+        this.addProvider(this.extend);
     };
 
 
@@ -68,8 +71,11 @@ define('gioc', function() {
 
         var value  = null,
             bean   = this.beans[key],
-            config = this.extend({}, bean.config, options);
+            config = {};
         this.log('==> solve, generated config ', config);
+
+        this.configure(key, config, bean.config, options);
+
         //build our value.
         value = this.build(key, config);
 
@@ -82,13 +88,19 @@ define('gioc', function() {
         return value;
     };
 
+    Gioc.prototype.configure = function(key, target, config, options){
+        (this.providers).map(function(provider){
+            provider.call(this, key, target, config, options);
+        }, this);
+    };
+
     Gioc.prototype.build = function(key, options){
         var bean   = this.beans[key],
             value  = bean.load;
        
         if(! bean.construct) return value;
     
-        var config = this.extend({}, bean.config, options),
+        var config = this.extend(key, {}, bean.config, options),
             args   = config.args,
             scope  = config.scope;
 
@@ -100,8 +112,6 @@ define('gioc', function() {
     //Meant to be overriden with use.
     Gioc.prototype.wire = function(key, target, config){
         config = config || {};
-        this.log('Wiring: ', target, config, 
-            typeof target === 'object', 'modifier' in config);
         
         //We have a literal value. We might want to modify it?
         if(typeof target !== 'object' && 'modifier' in config)
@@ -112,15 +122,11 @@ define('gioc', function() {
         var keys  = Object.keys(this.solvers);
         var solve = Object.keys(config).filter(function(k){ return keys.indexOf(k) !== -1;});
         solve.map(function(ckey){
-            this.log('Solving for key ', ckey);
             (this.solvers[ckey]).map(function(solver){
                 solver.call(this, key, target, config[ckey]);
             }, this);
-            //we should hold a ref to this.graph[key].push(ckey)
-            // delete config[ckey];
         }, this);
        
-
         return target;
     };
 
@@ -153,7 +159,6 @@ define('gioc', function() {
     };
 
     Gioc.prototype.post = function(key, target, options){
-        this.log('TODO', 'handle post collections: '+key);
         this.log('post ', this.editors);
         (this.editors).map(function(editor){
             console.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
@@ -212,7 +217,7 @@ define('gioc', function() {
     };
 
     Gioc.prototype.log = function(key, message){
-        console.log.apply(console, ['KEY: ', key, message]);
+        console.log.apply(console, arguments);
     };
 
     Gioc.prototype.addSolver = function(key, solver){
@@ -221,6 +226,10 @@ define('gioc', function() {
 
     Gioc.prototype.addPost = function(editor){
         this.editors.push(editor);
+    };
+
+    Gioc.prototype.addProvider = function(provider){
+        this.providers.push(provider);
     };
 
     Gioc.prototype.resetGraph = function(key, target, options){
@@ -234,7 +243,7 @@ define('gioc', function() {
      * @return {Object}        Resulting object from
      *                         meging target to params.
      */
-    Gioc.prototype.extend = function(key, target){
+    Gioc.prototype.extend = function(key, target, options, config){
         var i = 2, length = arguments.length, source;
         for ( ; i < length; i++ ) {
             // Only deal with defined values
