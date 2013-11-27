@@ -15,29 +15,6 @@ define('gioc', function() {
 
     var _slice = slice = Array.prototype.slice;
 
-    /**
-     * Extend method.
-     * @param  {Object} target Source object
-     * @return {Object}        Resulting object from
-     *                         meging target to params.
-     */
-    var _extend = function(target) {
-        var i = 1, length = arguments.length, source;
-        for ( ; i < length; i++ ) {
-            // Only deal with defined values
-            if ((source = arguments[i]) != undefined ){
-                Object.getOwnPropertyNames(source).forEach(function(k){
-                    var d = Object.getOwnPropertyDescriptor(source, k) || {value:source[k]};
-                    if (d.get) {
-                        target.__defineGetter__(k, d.get);
-                        if (d.set) target.__defineSetter__(k, d.set);
-                    } else if (target !== d.value) target[k] = d.value;                
-                });
-            }
-        }
-        return target;
-    };
-
 ////////////////////////////////////////
 /// CONSTRUCTOR
 ////////////////////////////////////////
@@ -50,29 +27,24 @@ define('gioc', function() {
     var Gioc = function(config){
         //Store all bean info.
         this.beans = {};
-        
+        this.graph = {};
+
         //TODO: This should be configurable.
         this.depsKey = 'deps';
+        this.postKey = 'post';
         this.propKey = 'props';
 
         //Solvers methods should have a common signature:
         //id, target, options (which should be similar throught all methods)
         this.solvers = {};
-        this.solvers[this.depsKey] = this.solveDependencies;
-        this.solvers[this.propKey] = _extend;
 
-        this.addSolver(this.propKey, this._extend);
+        this.addSolver(this.propKey, this.extend);
         this.addSolver(this.depsKey, this.solveDependencies);
+        
+        //This should prob have a different signature, addPost?
+        this.editors = [];
+        this.addPost(this.resetGraph)
     };
-
-    Gioc.prototype.addSolver = function(key, solver){
-        (this.solvers[key] || (this.solvers[key] = [])).push(solver);
-        // this.getSolver(key).push(solver);
-    };
-
-    Gioc.prototype.getSolver = function(key){
-        return 
-    }
 
 
 ////////////////////////////////////////
@@ -96,7 +68,7 @@ define('gioc', function() {
 
         var value  = null,
             bean   = this.beans[key],
-            config = _extend({}, bean.config, options);
+            config = this.extend({}, bean.config, options);
         this.log('==> solve, generated config ', config);
         //build our value.
         value = this.build(key, config);
@@ -116,7 +88,7 @@ define('gioc', function() {
        
         if(! bean.construct) return value;
     
-        var config = _extend({}, bean.config, options),
+        var config = this.extend({}, bean.config, options),
             args   = config.args,
             scope  = config.scope;
 
@@ -135,12 +107,19 @@ define('gioc', function() {
         if(typeof target !== 'object' && 'modifier' in config)
             return config.modifier(target);
 
-        //We need a collection of key to handler, and iterate over
-        if(this.propKey in config) _extend(target, config[this.propKey]);
-
-        //
-        if(this.depsKey in config) 
-            this.solveDependencies(key, target, config[this.depsKey]);
+        //solve is the intersection between all keys in the 
+        //config object and the solvers.
+        var keys  = Object.keys(this.solvers);
+        var solve = Object.keys(config).filter(function(k){ return keys.indexOf(k) !== -1;});
+        solve.map(function(ckey){
+            this.log('Solving for key ', ckey);
+            (this.solvers[ckey]).map(function(solver){
+                solver.call(this, key, target, config[ckey]);
+            }, this);
+            //we should hold a ref to this.graph[key].push(ckey)
+            // delete config[ckey];
+        }, this);
+       
 
         return target;
     };
@@ -173,8 +152,14 @@ define('gioc', function() {
         return this;
     };
 
-    Gioc.prototype.post = function(key, value, options){
-        this.log('TODO', 'handle post collections');
+    Gioc.prototype.post = function(key, target, options){
+        this.log('TODO', 'handle post collections: '+key);
+        this.log('post ', this.editors);
+        (this.editors).map(function(editor){
+            console.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
+            editor.call(this, key, target, options);
+        }, this);
+        
     };
 
     /**
@@ -189,8 +174,6 @@ define('gioc', function() {
         return (key in this.beans);
     };
 
-
-
     /**
      * Solve an array of dependencies.
      * 
@@ -203,7 +186,7 @@ define('gioc', function() {
     Gioc.prototype.solveDependencies = function(key, scope, mappings){
         (this.graph = this.graph || {}) && (this.graph[key]=key);
 
-        mappings.forEach((function(bean){
+        mappings.map(function(bean){
             //Normalize bean def, if string, we ride on defaults.                
             if(typeof bean === 'string') 
                 bean = {id:bean, options:{setter:bean}};
@@ -219,7 +202,7 @@ define('gioc', function() {
             //Bean resolved, move on.
             delete this.graph[bean.id];
 
-        }).bind(this));
+        }, this);
         this.log(key, this.graph)
         return this;
     };
@@ -230,6 +213,42 @@ define('gioc', function() {
 
     Gioc.prototype.log = function(key, message){
         console.log.apply(console, ['KEY: ', key, message]);
+    };
+
+    Gioc.prototype.addSolver = function(key, solver){
+        (this.solvers[key] || (this.solvers[key] = [])).push(solver);
+    };
+
+    Gioc.prototype.addPost = function(editor){
+        this.editors.push(editor);
+    };
+
+    Gioc.prototype.resetGraph = function(key, target, options){
+        this.log('=== DELETE GRAPH')
+        if(key in this.graph) delete this.graph[key];
+    };
+
+    /**
+     * Extend method.
+     * @param  {Object} target Source object
+     * @return {Object}        Resulting object from
+     *                         meging target to params.
+     */
+    Gioc.prototype.extend = function(key, target){
+        var i = 2, length = arguments.length, source;
+        for ( ; i < length; i++ ) {
+            // Only deal with defined values
+            if ((source = arguments[i]) != undefined ){
+                Object.getOwnPropertyNames(source).forEach(function(k){
+                    var d = Object.getOwnPropertyDescriptor(source, k) || {value:source[k]};
+                    if (d.get) {
+                        target.__defineGetter__(k, d.get);
+                        if (d.set) target.__defineSetter__(k, d.set);
+                    } else if (target !== d.value) target[k] = d.value;                
+                });
+            }
+        }
+        return target;
     };
 
     return Gioc;
