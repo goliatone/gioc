@@ -56,5 +56,7 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             });
             expect(gioc.solve('factory')).toBe(23);
         });
+
+        
     });
 });
