@@ -72,8 +72,8 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 			  {id:'sync', 
 				options:{
 			  	props:{url:'localhost'},			 
-				post:function(){
-					console.log('************ hello sync ', this, arguments);
+				after:function(){
+					console.log('************ POST: hello sync ', this, arguments);
 				}
 			}
 		}]
