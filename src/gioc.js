@@ -58,20 +58,49 @@ define('gioc', function() {
 ////////////////////////////////////////
 /// PUBLIC METHODS
 ////////////////////////////////////////
-
+    
+    /**
+     * Stores a definition, with configuration
+     * options, to be *solved* later.
+     * The payload can be either a literal value
+     * or a factory method.
+     *    
+     * @param  {String} key      String ID.
+     * @param  {Object|Function} payload Value to be map.
+     * @param  {Object} config   Options for current mapping.
+     * @return {Gioc}
+     */
     Gioc.prototype.map = function(key, payload, config){
         //Store basic information of our payload.
         var bean = {key:key, load:payload, config:(config || {})};
         //Is this a factory or a literal value?
         bean.construct =
         bean.isFactory = typeof payload === 'function';
+
         //TODO: How do we want to handle collision? We are overriding.
+        if(this.mapped(key)) this.log(key, 'key is already mapped, overriding.');
+
         this.beans[key] = bean;
 
         return this;
     };
 
+    /**
+     * Solve for the provided *key*. 
+     * The cycle to solve for a key is the
+     * result of runing the methods in order
+     * `configure` as a pre process, `build` to
+     * generate the payload, `wire` to solve
+     * dependencies, and `post` as a post process.
+     * 
+     * @param  {String} key       String ID.
+     * @param  {Object} options   Options object.
+     * @return {Object|undefined} Solved value 
+     *                            for the given key.
+     */
     Gioc.prototype.solve = function(key, options){
+        //TODO: If we try to solve an unregistered key, what should
+        //we do? Throw or return undefined?
         if (!this.mapped(key)) return undefined;
 
         var value  = null,
@@ -79,6 +108,7 @@ define('gioc', function() {
             config = {};
         this.log('==> solve, generated config ', config);
 
+        //pre-process
         this.configure(key, config, bean.config, options);
 
         //build our value.
@@ -93,13 +123,46 @@ define('gioc', function() {
         return value;
     };
 
+    /**
+     * Pre process to consolidate the configuration
+     * object for a given key.
+     * It will loop over all providers in order the order
+     * they were added and call the provider with the 
+     * Gioc instance as scope.
+     * The default provider is the `extend` method.
+     * 
+     * @param  {String} key       String ID.
+     * @param  {Object} target   Resulting object.
+     * @param  {Object} config   Conf object stored with the
+     *                           key.
+     * @param  {Object} options  Conf object passed in the
+     *                           method call.
+     * @return {Gioc}
+     */
     Gioc.prototype.configure = function(key, target, config, options){
         (this.providers).map(function(provider){
             provider.call(this, key, target, config, options);
         }, this);
+        return this;
     };
 
+    /**
+     * Retrieve the payload value for the given *key*.
+     * If the payload is a literal value, we just return 
+     * it without any further steps. If the payload is a
+     * function then we execute it with the **scope** and
+     * **args** provided in the config object.
+     * 
+     * @param  {String} key      String ID.
+     * @param  {Object} options  Conf object passed in the
+     *                           method call.
+     * @return {Primitive|Object} Raw stored value for key.
+     */
     Gioc.prototype.build = function(key, options){
+        //TODO: If we try to solve an unregistered key, what should
+        //we do? Throw or return undefined?
+        if (!this.mapped(key)) return undefined;
+
         var bean   = this.beans[key],
             value  = bean.load;
        
@@ -114,7 +177,22 @@ define('gioc', function() {
         return value;
     };
 
-    //Meant to be overriden with use.
+    /**
+     * Goes over the `config` object's keys
+     * and of the key is related to a solver
+     * it will apply the solver method to the
+     * target.
+     * Meant to be overriden with use.
+     * Default solvers are the `extend` method
+     * for the key `props` and `solveDependencies`
+     * for the `deps` key.
+     * 
+     * @param  {String} key      String ID we are solving
+     *                           for.
+     * @param  {[type]} target [description]
+     * @param  {[type]} config [description]
+     * @return {[type]}        [description]
+     */
     Gioc.prototype.wire = function(key, target, config){
         config = config || {};
         
@@ -223,6 +301,7 @@ define('gioc', function() {
 
     Gioc.prototype.log = function(key, message){
         console.log.apply(console, arguments);
+        return this;
     };
 
     Gioc.prototype.addSolver = function(key, solver){
