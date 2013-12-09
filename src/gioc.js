@@ -30,6 +30,11 @@ define('gioc', function() {
         this.graph = {};
 
         //TODO: This should be configurable.
+        /* Default supported directives:
+         * - deps: dependencies
+         * - post: post wire execution
+         * - props: add props to instantiated value.
+         */
         this.depsKey = 'deps';
         this.postKey = 'post';
         this.propKey = 'props';
