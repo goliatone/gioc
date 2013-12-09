@@ -36,7 +36,7 @@ define('gioc', function() {
          * - props: add props to instantiated value.
          */
         this.depsKey = 'deps';
-        this.postKey = 'post';
+        this.postKey = 'after';
         this.propKey = 'props';
 
         //Solvers methods should have a common signature:
@@ -93,7 +93,8 @@ define('gioc', function() {
      * generate the payload, `wire` to solve
      * dependencies, and `post` as a post process.
      * 
-     * @param  {String} key       String ID.
+     * @param  {String} key      String ID we are solving
+     *                           for
      * @param  {Object} options   Options object.
      * @return {Object|undefined} Solved value 
      *                            for the given key.
@@ -131,7 +132,8 @@ define('gioc', function() {
      * Gioc instance as scope.
      * The default provider is the `extend` method.
      * 
-     * @param  {String} key       String ID.
+     * @param  {String} key      String ID we are solving
+     *                           for
      * @param  {Object} target   Resulting object.
      * @param  {Object} config   Conf object stored with the
      *                           key.
@@ -153,7 +155,8 @@ define('gioc', function() {
      * function then we execute it with the **scope** and
      * **args** provided in the config object.
      * 
-     * @param  {String} key      String ID.
+     * @param  {String} key      String ID we are solving
+     *                           for
      * @param  {Object} options  Conf object passed in the
      *                           method call.
      * @return {Primitive|Object} Raw stored value for key.
@@ -179,7 +182,7 @@ define('gioc', function() {
 
     /**
      * Goes over the `config` object's keys
-     * and of the key is related to a solver
+     * and for any of its keys that has a related solver
      * it will apply the solver method to the
      * target.
      * Meant to be overriden with use.
@@ -188,9 +191,10 @@ define('gioc', function() {
      * for the `deps` key.
      * 
      * @param  {String} key      String ID we are solving
-     *                           for.
-     * @param  {[type]} target [description]
-     * @param  {[type]} config [description]
+     *                           for
+     * @param  {Primitive|Object} target Solved value for the
+     *                                   provided key.
+     * @param  {Object} config  Configuration object.
      * @return {[type]}        [description]
      */
     Gioc.prototype.wire = function(key, target, config){
@@ -214,12 +218,13 @@ define('gioc', function() {
     };
 
     /**
-     * [inject description]
-     * @param  {[type]} scope  [description]
-     * @param  {[type]} key    [description]
-     * @param  {[type]} setter [description]
-     * @param  {[type]} post   [description]
-     * @return {[type]}        [description]
+     * Injects a dependency onto the provided `scope`
+     *     
+     * @param  {String} key      String ID we are solving
+     *                           for
+     * @param  {Object} scope   [description]
+     * @param  {[type]} options [description]
+     * @return {[type]}         [description]
      */
     Gioc.prototype.inject = function (key, scope, options) {
         //TODO: We should want to handle this differently
@@ -236,18 +241,28 @@ define('gioc', function() {
         else if( typeof setter === 'string') scope[setter] = value;
 
         //TODO: We should treat this as an array
-        if('post' in options) options.post.apply(scope, options.postArgs);
+        //TODO: This should be the 'initialize' phase!
+        if(this.postKey in options) options[this.postKey].apply(scope, options.postArgs);
 
         return this;
     };
 
+    /**
+     * During the solve cycle, the post process applied
+     * after the payload has been configured, built, and
+     * wired.
+     * @param  {String} key     [description]
+     * @param  {Primitive|Object} target  Result from solving key.
+     * @param  {Object} options Options object.
+     * @return {Gioc}
+     */
     Gioc.prototype.post = function(key, target, options){
         this.log('post ', this.editors);
         (this.editors).map(function(editor){
             console.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
             editor.call(this, key, target, options);
         }, this);
-        
+        return this;
     };
 
     /**
@@ -309,11 +324,15 @@ define('gioc', function() {
     };
 
     Gioc.prototype.addPost = function(editor){
-        this.editors.push(editor);
+        if(this.editors.indexOf(editor) === -1)
+            this.editors.push(editor);
+        return this;
     };
 
     Gioc.prototype.addProvider = function(provider){
-        this.providers.push(provider);
+        if(this.providers.indexOf(provider) === -1)
+            this.providers.push(provider);
+        return this;
     };
 
     Gioc.prototype.resetGraph = function(key, target, options){
