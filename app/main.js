@@ -37,14 +37,13 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 		console.log('========>> ', target)
 		try{
 			deps.map(function(dep){
-				console.log(dep)
-				if(! dep in target){
-					console.log('try to solve')
+				console.log('desp for ', dep)
+				if(!target[dep]){
+					console.log('try to solve ', dep)
 					var lib = require(dep);
 					if(lib) target[dep] = lib;
-				}
-			}, this);
-			
+				} else console.log("**********---------************ ", dep, target[dep])
+			}, this);			
 		}catch(e){}
 	});
 
@@ -66,17 +65,20 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 		console.log('user factory: ', this, options);
 		return new User();
 	}, {
-		factoryOptions:true, 
+		props:{factoryOptions:true},
 		deps:['userid',
 			  'jquery',
-			  {id:'sync', 
-				options:{
-			  	props:{url:'localhost'},			 
-				after:function(){
-					console.log('************ POST: hello sync ', this, arguments);
+			  {
+			  	id:'sync', 
+					options:{
+				  		props:{url:'localhost'},			 
+						after:function(age, tag){
+							console.log('************ POST: hello sync age ', age, ' tag ', tag);
+						},
+						pargs:[23,'something']
+					}
 				}
-			}
-		}]
+			]
 	});
 
 	console.log('Beans ', gioc.beans);
