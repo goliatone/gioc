@@ -36,13 +36,22 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	gioc.addSolver('deps', function(key, target, deps){
 		console.log('========>> ', target)
 		try{
-			deps.map(function(dep){
-				console.log('desp for ', dep)
-				if(!target[dep]){
-					console.log('try to solve ', dep)
-					var lib = require(dep);
-					if(lib) target[dep] = lib;
-				} else console.log("**********---------************ ", dep, target[dep])
+			deps.map(function(bean){
+				console.log('desp for ', bean)
+				if(!target[bean]){
+					if(typeof bean === 'string') 
+                		bean = {id:bean, options:{setter:bean}};
+					console.log('try to solve ', bean.id, bean.options.setter)
+					var key = bean.id,
+            			setter = bean.options.setter,
+						value = require(key);
+					if(typeof setter === 'function') setter.call(target, value, key);
+			        else if( typeof setter === 'string') target[setter] = value;
+
+			        //TODO: We should treat this as an array
+			        //TODO: This should be the 'initialize' phase!
+			        // if(this.postKey in options) options[this.postKey].apply(scope, options[this.postArgs]);
+				} else console.log("**********---------************ ", bean, target[bean])
 			}, this);			
 		}catch(e){}
 	});
@@ -61,11 +70,12 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 		}
 	});
 
-	gioc.map('user', function(options){
-		console.log('user factory: ', this, options);
+	gioc.map('user', function(first, last, age){
+		console.log('+++++++ user factory: first %s last %s age %s', first, last, age);
 		return new User();
 	}, {
 		props:{factoryOptions:true},
+		args:['pepe', 'rone', 23],
 		deps:['userid',
 			  'jquery',
 			  {
@@ -89,6 +99,10 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	var pepe = gioc.solve('user', {props:{first:'pepe', last:'rone'}});
 	console.log('User pepe ', pepe);
 
+	var app = {};
+	gioc.inject('user', app, {props:{first:'Goliat', last:'One'}});
+
 	window.pepe = pepe;
 	window.gioc = gioc;
+	window.app = app;
 });
