@@ -18,7 +18,7 @@ define('gioc', function() {
 ////////////////////////////////////////
 /// CONSTRUCTOR
 ////////////////////////////////////////
-
+    
     /**
      * Gioc constructor.
      * 
@@ -35,9 +35,10 @@ define('gioc', function() {
          * - post: post wire execution
          * - props: add props to instantiated value.
          */
-        this.depsKey = 'deps';
-        this.postKey = 'after';
-        this.propKey = 'props';
+        this.depsKey  = 'deps';
+        this.propKey  = 'props';
+        this.postKey  = 'after';
+        this.postArgs = 'pargs';
 
         //Solvers methods should have a common signature:
         //id, target, options (which should be similar throught all methods)
@@ -54,7 +55,16 @@ define('gioc', function() {
         this.addProvider(this.extend);
     };
 
-
+////////////////////////////////////////
+/// STATIC VARS
+////////////////////////////////////////
+    Gioc.configurables = ['depsKey', 'propKey', 'postKey', 'postArgs'];
+    Gioc.config = {
+        depsKey: 'deps',
+        propKey: 'props',
+        postKey: 'after',
+        postArgs: 'pargs'
+    };
 ////////////////////////////////////////
 /// PUBLIC METHODS
 ////////////////////////////////////////
@@ -73,6 +83,7 @@ define('gioc', function() {
     Gioc.prototype.map = function(key, payload, config){
         //Store basic information of our payload.
         var bean = {key:key, load:payload, config:(config || {})};
+
         //Is this a factory or a literal value?
         bean.construct =
         bean.isFactory = typeof payload === 'function';
@@ -242,7 +253,7 @@ define('gioc', function() {
 
         //TODO: We should treat this as an array
         //TODO: This should be the 'initialize' phase!
-        if(this.postKey in options) options[this.postKey].apply(scope, options.postArgs);
+        if(this.postKey in options) options[this.postKey].apply(scope, options[this.postArgs]);
 
         return this;
     };
@@ -304,7 +315,6 @@ define('gioc', function() {
             this.inject(bean.id, scope, bean.options);
             //Bean resolved, move on.
             delete this.graph[bean.id];
-
         }, this);
         this.log(key, this.graph)
         return this;
