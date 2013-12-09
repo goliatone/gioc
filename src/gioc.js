@@ -35,10 +35,11 @@ define('gioc', function() {
          * - post: post wire execution
          * - props: add props to instantiated value.
          */
-        this.depsKey  = 'deps';
-        this.propKey  = 'props';
-        this.postKey  = 'after';
-        this.postArgs = 'pargs';
+        config = this.extend({}, Gioc.config, config);
+        Gioc.configurables.map(function(ckey){
+            console.log(ckey, config[ckey]);
+            this[ckey] = config[ckey];
+        }, this);
 
         //Solvers methods should have a common signature:
         //id, target, options (which should be similar throught all methods)
@@ -58,11 +59,12 @@ define('gioc', function() {
 ////////////////////////////////////////
 /// STATIC VARS
 ////////////////////////////////////////
-    Gioc.configurables = ['depsKey', 'propKey', 'postKey', 'postArgs'];
+    Gioc.configurables = ['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey'];
     Gioc.config = {
         depsKey: 'deps',
         propKey: 'props',
         postKey: 'after',
+        modKey: 'modifier',
         postArgs: 'pargs'
     };
 ////////////////////////////////////////
@@ -97,7 +99,8 @@ define('gioc', function() {
     };
 
     /**
-     * Solve for the provided *key*. 
+     * Solve for the provided *key*, it returns a value
+     * and solves all dependencies, etc. 
      * The cycle to solve for a key is the
      * result of runing the methods in order
      * `configure` as a pre process, `build` to
@@ -212,8 +215,8 @@ define('gioc', function() {
         config = config || {};
         
         //We have a literal value. We might want to modify it?
-        if(typeof target !== 'object' && 'modifier' in config)
-            return config.modifier(target);
+        if(typeof target !== 'object' && this.modKey in config)
+            return config[this.modKey](target);
 
         //solve is the intersection between all keys in the 
         //config object and the solvers.
@@ -229,7 +232,7 @@ define('gioc', function() {
     };
 
     /**
-     * Injects a dependency onto the provided `scope`
+     * Injects a dependency into the provided `scope`
      *     
      * @param  {String} key      String ID we are solving
      *                           for
@@ -248,7 +251,7 @@ define('gioc', function() {
         //we handle it? Do we break the whole chain?
         if(value === undefined) return this;
 
-        if(typeof setter === 'function') scope.call(scope, value, key);
+        if(typeof setter === 'function') setter.call(scope, value, key);
         else if( typeof setter === 'string') scope[setter] = value;
 
         //TODO: We should treat this as an array
@@ -299,7 +302,14 @@ define('gioc', function() {
      */
     Gioc.prototype.solveDependencies = function(key, scope, mappings){
         (this.graph = this.graph || {}) && (this.graph[key]=key);
-
+        /*
+         * Try to add a dependency solver based on requirejs
+         * We might have to keep track of dependencies, and only
+         * execute next solver if the previous one failed, so we
+         * might want to modify the array as we go, to remove the 
+         * key from the next loop.
+         * We should use `every` or `some` instead of map.
+         */
         mappings.map(function(bean){
             //Normalize bean def, if string, we ride on defaults.                
             if(typeof bean === 'string') 
