@@ -26,6 +26,28 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	var gioc = new Gioc();
 	gioc.map('User', User,{});
 
+	/*
+	 * Try to add a dependency solver based on requirejs
+	 * We might have to keep track of dependencies, and only
+	 * execute next solver if the previous one failed, so we
+	 * might want to modify the array as we go, to remove the 
+	 * key from the next loop.
+	 */
+	gioc.addSolver('deps', function(key, target, deps){
+		console.log('========>> ', target)
+		try{
+			deps.map(function(dep){
+				console.log(dep)
+				if(! dep in target){
+					console.log('try to solve')
+					var lib = require(dep);
+					if(lib) target[dep] = lib;
+				}
+			}, this);
+			
+		}catch(e){}
+	});
+
 	gioc.map('ajax', function(){return new Ajax;},{
 		// deps:['user']
 	});
@@ -46,8 +68,9 @@ define(['gioc', 'jquery'], function (Gioc, $) {
 	}, {
 		factoryOptions:true, 
 		deps:['userid',
-			{id:'sync', 
-			options:{
+			  'jquery',
+			  {id:'sync', 
+				options:{
 			  	props:{url:'localhost'},			 
 				post:function(){
 					console.log('************ hello sync ', this, arguments);
