@@ -6,17 +6,22 @@
 /* jshint strict: false */
 define(['gioc', 'jquery'], function(Gioc, $) {
 
-    describe('just checking', function() {
+    describe('Gioc...', function() {
 
-        it('Gioc shold be loaded', function() {
+        it('should be loaded', function() {
             expect(Gioc).toBeTruthy();
             var gioc = new Gioc();
             expect(gioc).toBeTruthy();
         });
 
-        it('Gioc shold contain known methods.', function() {
+        it('should contain known methods.', function() {
             var gioc = new Gioc();
-            var methods = ['map', 'solve', 'build', 'wire', 'inject', 'mapped', 'solveDependencies'];
+            var methods = ['map', 'solve', 'configure', 'build', 
+                           'wire', 'inject', 'post', 'mapped', 
+                           'solveDependencies', 'error', 'log',
+                           'addSolver', 'addPost', 'addProvider', 
+                           'resetGraph', 'extend'
+                           ];
             var method;
             for(var m in methods){
                 method = methods[m];
@@ -25,7 +30,7 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             }
         });
 
-        it('Gioc should add factories',function(){
+        it('should add factories',function(){
             var factory = function(){return 'im a factory';};
             var gioc  = new Gioc();
             gioc.map('f', factory);
