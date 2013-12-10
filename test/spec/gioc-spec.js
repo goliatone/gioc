@@ -5,7 +5,7 @@
 /*global beforeEach:true */
 /* jshint strict: false */
 define(['gioc', 'jquery'], function(Gioc, $) {
-
+console.log('-------------');
     describe('Gioc...', function() {
 
         it('should be loaded', function() {
@@ -74,12 +74,12 @@ define(['gioc', 'jquery'], function(Gioc, $) {
         it('we can force a key to solve as a literal value',function(){
             var factory = function(){return 23;};
             var gioc = new Gioc;
-            gioc.map('factory2', factory);
-            expect(gioc.solve('factory2')).toBe(23);
+            gioc.map('factory', factory);
+            expect(gioc.solve('factory')).toBe(23);
 
             var config = {};
             config[gioc.factoryKey] = false;
-            expect(gioc.solve('factory2', config)).toMatchObject(factory);
+            expect(gioc.solve('factory', config)).toMatchObject(factory);
 
         });
     });
@@ -124,13 +124,14 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             });
         });
 
-        it('should change static default values',function(){
+        it('should change static default values 1',function(){
             var attrs    = Gioc.config.attributes,
                 defaults = Gioc.config.defaults,
+                oldvals  = gioc.extend('key', {}, defaults),
                 value    = null;
 
             attrs.map(function(attr){
-                value = defaults[attr];
+                value = oldvals[attr];
                 defaults[attr] = value + 'MOD';
             });
 
@@ -139,11 +140,18 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             attrs.map(function(key){
                 expect(gioc[key]).toBe(defaults[key]);
             });
+
+            //We need to reset the attributes to its old value
+            //that is one issue of using "static" variables.
+            Gioc.config.defaults = oldvals;
         });
 
-        it('should change static default values',function(){
+        it('should change static default values 2',function(){
+            gioc = new Gioc();
+
             var attrs    = Gioc.config.attributes,
                 defaults = Gioc.config.defaults,
+                oldvals  = gioc.extend('key', {}, defaults),
                 value    = null;
 
             attrs.map(function(attr){
@@ -156,6 +164,10 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             attrs.map(function(key){
                 expect(gioc[key]).toBe(defaults[key]);
             });
+
+            //We need to reset the attributes to its old value
+            //that is one issue of using "static" variables.
+            Gioc.config.defaults = oldvals;
         });
     });
 
@@ -225,13 +237,69 @@ define(['gioc', 'jquery'], function(Gioc, $) {
         };
 
         var gioc;
+
         beforeEach(function(){
             gioc = new Gioc();
-            gioc.map('User', User);
+            gioc.configure();
+            var litconf = {};
+            litconf[gioc.factoryKey] = false;
+            
+            gioc.map('User', User, litconf);
+            
+            gioc.map('Ajax', Ajax, litconf);
 
-            gioc.map('ajax', function(Ajax){
+            gioc.map('Sync', Sync, litconf);
+            
+            gioc.map('ajax', function(){
+                var Ajax = this.solve('Ajax');
                 return new Ajax();
             }, {deps:['Ajax']});
+
+            gioc.map('sync', function(){
+                var Sync = gioc.solve('Sync');
+                return new Sync;
+            });
+
+            gioc.map('userid', 12345);
+            gioc.map('created', 1386667593, { modifier:function(unix){
+                return new Date(unix * 1000);
+            }});
+            
+            gioc.map('user', function(first, last, age){
+                var User = this.solve('User');
+                return new User(first, last, age);
+            });        
+        });
+
+        it('should apply modifiers', function(){
+            var expected = new Date('2013-12-10T09:26:33');
+            expect(gioc.solve('created')).toMatchObject(expected);
+        });
+
+        it('should solve dependencies',function(){
+            var afterSpy = sinon.spy();
+
+            var user = gioc.solve('user', { args:['goliat', 'one', 32], 
+                                            deps:['userid','jquery', 'created',{
+                                                id:'sync',
+                                                options:{
+                                                    props:{url:'goliatone.com'},
+                                                    after:afterSpy,
+                                                    pargs:['23', 'argument']
+                                                }
+                                            }]
+            });
+            expect(user).toHaveProperties('first', 'last', 'age', 'userid', 'sync', 'created');
+            expect(user.last).toBe('one');
+            expect(user.first).toBe('goliat');
+            expect(user.age).toBe(32);
+            expect(user.fullName()).toBe('goliat one');
+
+            expect(user.sync).toHaveProperties('url');
+            expect(user.sync.url).toBe('goliatone.com');
+
+            expect(afterSpy).toHaveBeenCalled();
+            expect(afterSpy).toHaveBeenCalledWith('23', 'argument');
         });
     });
 });
