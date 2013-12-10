@@ -58,6 +58,9 @@ define('gioc', function() {
 /// STATIC VARS
 ////////////////////////////////////////
     //TODO: Add support for chain props.
+    //TODO: If we modify this, ie unit testing,
+    //      then we cant reset. REMOVE STATIC or have
+    //      a default src.
     Gioc.config = {
         attributes:['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey', 'factoryKey'],
         defaults:{
