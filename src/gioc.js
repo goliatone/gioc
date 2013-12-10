@@ -24,22 +24,12 @@ define('gioc', function() {
      * 
      * @param  {Object} config Optional config object.
      */
-    var Gioc = function(config){
+    var Gioc = function Gioc(config){
         //Store all bean info.
         this.beans = {};
         this.graph = {};
 
-        //TODO: This should be configurable.
-        /* Default supported directives:
-         * - deps: dependencies
-         * - post: post wire execution
-         * - props: add props to instantiated value.
-         */
-        config = this.extend({}, Gioc.config, config);
-        Gioc.configurables.map(function(ckey){
-            console.log(ckey, config[ckey]);
-            this[ckey] = config[ckey];
-        }, this);
+        this.configure(config);
 
         //Solvers methods should have a common signature:
         //id, target, options (which should be similar throught all methods)
@@ -59,18 +49,33 @@ define('gioc', function() {
 ////////////////////////////////////////
 /// STATIC VARS
 ////////////////////////////////////////
-    Gioc.configurables = ['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey'];
+    //TODO: Move to its own scope, Gioc.config.attributes and
+    //Gioc.config.default
     Gioc.config = {
-        depsKey: 'deps',
-        propKey: 'props',
-        postKey: 'after',
-        modKey: 'modifier',
-        postArgs: 'pargs'
+        attributes:['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey'],
+        defaults:{
+            depsKey: 'deps',
+            propKey: 'props',
+            postKey: 'after',
+            modKey: 'modifier',
+            postArgs: 'pargs'
+        }
     };
 ////////////////////////////////////////
 /// PUBLIC METHODS
 ////////////////////////////////////////
-    
+    Gioc.prototype.configure = function(config){
+        //TODO: This should be configurable.
+        /* Default supported directives:
+         * - deps: dependencies
+         * - post: post wire execution
+         * - props: add props to instantiated value.
+         */
+        config = this.extend({}, Gioc.config.defaults, config);
+        Gioc.config.attributes.map(function(ckey){
+            this[ckey] = config[ckey];
+        }, this);
+    };
     /**
      * Stores a definition, with configuration
      * options, to be *solved* later.
@@ -103,7 +108,7 @@ define('gioc', function() {
      * and solves all dependencies, etc. 
      * The cycle to solve for a key is the
      * result of runing the methods in order
-     * `configure` as a pre process, `build` to
+     * `prepare` as a pre process, `build` to
      * generate the payload, `wire` to solve
      * dependencies, and `post` as a post process.
      * 
@@ -124,7 +129,7 @@ define('gioc', function() {
         this.log('==> solve, generated config ', config);
 
         //pre-process
-        this.configure(key, config, bean.config, options);
+        this.prepare(key, config, bean.config, options);
 
         //build our value.
         value = this.build(key, config);
@@ -155,7 +160,7 @@ define('gioc', function() {
      *                           method call.
      * @return {Gioc}
      */
-    Gioc.prototype.configure = function(key, target, config, options){
+    Gioc.prototype.prepare = function(key, target, config, options){
         (this.providers).map(function(provider){
             provider.call(this, key, target, config, options);
         }, this);
