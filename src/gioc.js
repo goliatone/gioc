@@ -29,28 +29,30 @@ define('gioc', function() {
         this.beans = {};
         this.graph = {};
 
+        this.solvers = {};
+        this.editors = [];
+        
+        this.providers = [];
+
         this.configure(config);
 
         //Solvers methods should have a common signature:
         //id, target, options (which should be similar throught all methods)
-        this.solvers = {};
 
         this.addSolver(this.propKey, this.extend);
         this.addSolver(this.depsKey, this.solveDependencies);
         
-        //This should prob have a different signature, addPost?
-        this.editors = [];
+        //TODO: Should addPost and addProvider have the 
+        //same signature as addSolver?
         this.addPost(this.resetGraph);
 
-        this.providers = [];
         this.addProvider(this.extend);
     };
 
 ////////////////////////////////////////
 /// STATIC VARS
 ////////////////////////////////////////
-    //TODO: Move to its own scope, Gioc.config.attributes and
-    //Gioc.config.default
+    //TODO: Add support for chain props.
     Gioc.config = {
         attributes:['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey'],
         defaults:{
