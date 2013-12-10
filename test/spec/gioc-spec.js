@@ -63,18 +63,22 @@ define(['gioc', 'jquery'], function(Gioc, $) {
         });
 
         it('should have a *static* config object', function(){
+            
             expect(Gioc.config).toBeTruthy();
         });
 
         it('config object should have an defaults prop', function(){
+            
             expect(Gioc.config.defaults).toBeTruthy();
         });
 
         it('config object should have an attributes prop', function(){
+            
             expect(Gioc.config.attributes).toBeTruthy();
         });
 
         it('defaults and attributes should be equal length', function(){
+            
             expect(Gioc.config.attributes).toMatchLengthOf(Gioc.config.defaults);
         });
 
@@ -101,12 +105,75 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             });
 
             gioc = new Gioc();
-            // gioc.configure();
 
             attrs.map(function(key){
                 expect(gioc[key]).toBe(defaults[key]);
             });
         });
 
+        it('should change static default values',function(){
+            var attrs    = Gioc.config.attributes,
+                defaults = Gioc.config.defaults,
+                value    = null;
+
+            attrs.map(function(attr){
+                value = defaults[attr];
+                defaults[attr] = value + 'MOD';
+            });
+
+            gioc.configure();
+
+            attrs.map(function(key){
+                expect(gioc[key]).toBe(defaults[key]);
+            });
+        });
+    });
+
+    describe('Gioc', function(){
+        var gioc;
+        beforeEach(function(){
+            gioc = new Gioc;
+        });
+        it('should have a default editors, resetGraph',function(){
+            expect(gioc.solvers).toHaveLength(2);
+            expect(gioc.solvers[gioc.propKey]).toEqual([gioc.extend]);
+            expect(gioc.solvers[gioc.depsKey]).toEqual([gioc.solveDependencies]);
+        });
+
+        it('addSolver', function(){
+            var solver = function(){};
+            var expected = {};
+            expected[gioc.propKey] = [gioc.extend];
+            expected[gioc.depsKey] = [gioc.solveDependencies];
+            expected['key'] = [solver];
+
+            gioc.addSolver('key', solver);
+            expect(gioc.solvers).toHaveLength(3);
+            expect(gioc.solvers).toMatchObject(expected);
+        });
+
+        it('should have a default provider, extend',function(){
+            expect(gioc.providers).toHaveLength(1);
+            expect(gioc.providers[0]).toEqual(gioc.extend);
+        });
+
+        it('addProvider', function(){
+            var provider = function(){};
+            gioc.addProvider(provider);
+            expect(gioc.providers).toHaveLength(2);
+            expect(gioc.providers).toMatchObject([gioc.extend, provider]);
+        });
+
+        it('should have a default editors, resetGraph',function(){
+            expect(gioc.editors).toHaveLength(1);
+            expect(gioc.editors[0]).toEqual(gioc.resetGraph);
+        });
+
+        it('addPost', function(){
+            var editor = function(){};
+            gioc.addPost(editor);
+            expect(gioc.editors).toHaveLength(2);
+            expect(gioc.editors).toMatchObject([gioc.resetGraph, editor]);
+        });
     });
 });
