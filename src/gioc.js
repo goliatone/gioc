@@ -15,6 +15,11 @@ define('gioc', function() {
 
     var _slice = slice = Array.prototype.slice;
 
+    var _isFactory = function(bean){
+        if(this.factoryKey in bean.config) return bean.config[this.factoryKey];
+        return typeof bean.load === 'function';      
+    };
+
 ////////////////////////////////////////
 /// CONSTRUCTOR
 ////////////////////////////////////////
@@ -54,13 +59,14 @@ define('gioc', function() {
 ////////////////////////////////////////
     //TODO: Add support for chain props.
     Gioc.config = {
-        attributes:['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey'],
+        attributes:['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey', 'factoryKey'],
         defaults:{
             depsKey: 'deps',
             propKey: 'props',
             postKey: 'after',
             modKey: 'modifier',
-            postArgs: 'pargs'
+            postArgs: 'pargs',
+            factoryKey:'construct'
         }
     };
 ////////////////////////////////////////
@@ -88,14 +94,14 @@ define('gioc', function() {
      * @param  {Object|Function} payload Value to be map.
      * @param  {Object} config   Options for current mapping.
      * @return {Gioc}
-     */
+     */ 
     Gioc.prototype.map = function(key, payload, config){
         //Store basic information of our payload.
         var bean = {key:key, load:payload, config:(config || {})};
 
         //Is this a factory or a literal value?
         bean.construct =
-        bean.isFactory = typeof payload === 'function';
+        bean.isFactory = _isFactory.call(this, bean);
 
         //TODO: How do we want to handle collision? We are overriding.
         if(this.mapped(key)) this.log(key, 'key is already mapped, overriding.');
@@ -127,12 +133,11 @@ define('gioc', function() {
 
         var value  = null,
             bean   = this.beans[key],
-            config = {};
-        this.log('==> solve, generated config ', config);
-
+            config = {};        
         //pre-process
         this.prepare(key, config, bean.config, options);
 
+        this.log('==> solve, generated config ', config);
         //build our value.
         value = this.build(key, config);
 
@@ -189,10 +194,12 @@ define('gioc', function() {
 
         var bean   = this.beans[key],
             value  = bean.load;
-       
-        if(! bean.construct) return value;
-    
-        var config = this.extend(key, {}, bean.config, options),
+
+        //TODO: REFACTOR, CLEAN UP!!
+        if(options && this.factoryKey in options && !options[this.factoryKey]) return value;
+        if(!bean.construct) return value;
+
+        var config = this.extend(key, {scope:this}, bean.config, options),
             args   = config.args,
             scope  = config.scope;
 
@@ -280,7 +287,7 @@ define('gioc', function() {
     Gioc.prototype.post = function(key, target, options){
         this.log('post ', this.editors);
         (this.editors).map(function(editor){
-            console.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
+            this.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
             editor.call(this, key, target, options);
         }, this);
         return this;
