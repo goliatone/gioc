@@ -53,12 +53,42 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             });
             expect(gioc.solve('factory')).toBe(23);
         });
+
+        it('extend should respect default values', function(){
+            var gioc = new Gioc;
+            var options = {age:23};
+            var defaults = {age:0, name:'goliat'};
+            var output = gioc.extend('key', {}, defaults, options);
+            var expected = {age:23, name:'goliat'};
+            expect(output).toMatchObject(expected);
+        })
+
+        it('factories should have gioc instance scope', function(){
+             var gioc = new Gioc();
+            gioc.map('factory', function(){
+                return this;
+            });
+            expect(gioc.solve('factory')).toMatchObject(gioc);
+        });
+
+        it('we can force a key to solve as a literal value',function(){
+            var factory = function(){return 23;};
+            var gioc = new Gioc;
+            gioc.map('factory2', factory);
+            expect(gioc.solve('factory2')).toBe(23);
+
+            var config = {};
+            config[gioc.factoryKey] = false;
+            expect(gioc.solve('factory2', config)).toMatchObject(factory);
+
+        });
     });
 
     describe('Gioc configuration', function(){
         var gioc;
 
         beforeEach(function(){
+            
             gioc = new Gioc();
         });
 
@@ -174,6 +204,34 @@ define(['gioc', 'jquery'], function(Gioc, $) {
             gioc.addPost(editor);
             expect(gioc.editors).toHaveLength(2);
             expect(gioc.editors).toMatchObject([gioc.resetGraph, editor]);
+        });
+    });
+
+    describe(' Gioc injection', function(){
+        var Ajax = function(){};
+
+        var Sync = function(){
+            this.url = 'empty';
+        };
+
+        var User = function(first, last, age){
+            this.first = first;
+            this.last = last;
+            this.age = age;
+        };
+
+        User.prototype.fullName = function(){
+            return this.first + ' ' + this.last;
+        };
+
+        var gioc;
+        beforeEach(function(){
+            gioc = new Gioc();
+            gioc.map('User', User);
+
+            gioc.map('ajax', function(Ajax){
+                return new Ajax();
+            }, {deps:['Ajax']});
         });
     });
 });
