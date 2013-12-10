@@ -113,6 +113,11 @@ beforeEach(function() {
         toNotMatch:function(object){
             return this.actual !== object;
         },
+        toMatchLengthOf:function(target){
+            console.log('length of ', _lengthOf(this.actual))
+            console.log('length of ', _lengthOf(target))
+            return _lengthOf(this.actual) === _lengthOf(target);
+        },
         toThrowInstanceOf: function(klass) {
             try {
                 this.actual();
@@ -157,6 +162,14 @@ beforeEach(function() {
     });
 });
 
+function _lengthOf(target){
+    if(target == null) return -1;
+    if(_isObject(target)) return Object.keys(target).length;
+    if('length' in target) return target.length;
+    
+    return -1;
+}
+
 function _fixArguments(args, keepBoxed){
     var a = Array.prototype.splice.call(args,0);
 
@@ -169,6 +182,9 @@ function _fixArguments(args, keepBoxed){
 
 function _isArray(item){
     return {}.toString.call(item) === '[object Array]';
+}
+function _isObject(item){
+    return {}.toString.call(item) === '[object Object]';
 }
 function _endsWith(haystack, needle){
   return haystack.substr(-needle.length) == needle;
