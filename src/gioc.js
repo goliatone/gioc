@@ -2,6 +2,17 @@
  * gioc
  * https://github.com/goliatone/gioc
  *
+ * TODO: Refactor processor related methods
+ *     addSolver
+ *     addPost
+ *     addProvider
+ *     Those should all use the same signature
+ *     and work in the same way, then have one method
+ *     that creates dynamically them.
+ *
+ * TODO: prepare and post could be one method, also 
+ *       dynamically attached.
+ * 
  * Copyright (c) 2013 goliatone
  * Licensed under the MIT license.
  */
