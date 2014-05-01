@@ -31,6 +31,28 @@ define('gioc', function() {
         return typeof bean.load === 'function';
     };
 
+    /**
+     * Shim console, make sure that if no console
+     * available calls do not generate errors.
+     * @return {Object} Console shim.
+     */
+    var _shimConsole = function(){
+        var empty = {},
+            con   = {},
+            noop  = function() {},
+            properties = 'memory'.split(','),
+            methods = ('assert,clear,count,debug,dir,dirxml,error,exception,group,' +
+                       'groupCollapsed,groupEnd,info,log,markTimeline,profile,profileEnd,' +
+                       'table,time,timeEnd,timeStamp,trace,warn').split(','),
+            prop,
+            method;
+
+        while (method = methods.pop())    con[method] = noop;
+        while (prop   = properties.pop()) con[prop]   = empty;
+
+        return con;
+    };
+
 ////////////////////////////////////////
 /// CONSTRUCTOR
 ////////////////////////////////////////
@@ -465,7 +487,7 @@ define('gioc', function() {
      * Stub method for logger.
      * By default is mapped to console.
      */
-    Gioc.prototype.logger = console;
+    Gioc.prototype.logger = console || _shimConsole();
 
     return Gioc;
 });
