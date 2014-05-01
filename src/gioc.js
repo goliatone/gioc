@@ -24,11 +24,11 @@ define('gioc', function() {
 /// PRIVATE METHODS
 ////////////////////////////////////////
 
-    var _slice = slice = Array.prototype.slice;
+    var _slice = Array.prototype.slice;
 
     var _isFactory = function(bean){
         if(this.factoryKey in bean.config) return bean.config[this.factoryKey];
-        return typeof bean.load === 'function';      
+        return typeof bean.load === 'function';
     };
 
 ////////////////////////////////////////
@@ -210,14 +210,17 @@ define('gioc', function() {
             value  = bean.load;
 
         //TODO: REFACTOR, CLEAN UP!!
-        if(options && this.factoryKey in options && !options[this.factoryKey]) return value;
+        if(options &&
+           this.factoryKey in options &&
+           !options[this.factoryKey]) return value;
+
         if(!bean.construct) return value;
 
         var config = this.extend(key, {scope:this}, bean.config, options),
             args   = config.args,
             scope  = config.scope;
 
-        value = value.apply(scope, args);           
+        value = value.apply(scope, args);
 
         return value;
     };
@@ -279,7 +282,7 @@ define('gioc', function() {
         //we handle it? Do we break the whole chain?
         if(value === undefined) return this;
 
-        if(typeof setter === 'function') setter.call(scope, value, key);
+        if( typeof setter === 'function') setter.call(scope, value, key);
         else if( typeof setter === 'string') scope[setter] = value;
 
         //TODO: We should treat this as an array
@@ -384,7 +387,7 @@ define('gioc', function() {
     };
 
     Gioc.prototype.resetGraph = function(key, target, options){
-        this.log('=== DELETE GRAPH')
+        this.log('=== DELETE GRAPH');
         if(key in this.graph) delete this.graph[key];
     };
 
