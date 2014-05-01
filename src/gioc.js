@@ -393,7 +393,7 @@ define('gioc', function() {
      * @return {void}
      */
     Gioc.prototype.error = function(key, message){
-        if(this.strictErrors) throw new Error(key, message);
+        if(this.strictErrors === true) throw new Error(key, message);
         this.logger.error(key, message);
     };
 
