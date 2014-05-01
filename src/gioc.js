@@ -287,7 +287,7 @@ define('gioc', function() {
      * @return {this}
      */
     Gioc.prototype.inject = function (key, scope, options) {
-        if(! this.mapped(key)) return this.error(key, 'Provided key is not mapped.');
+        if(! this.mapped(key)) return this.logger.error(key, 'Provided key is not mapped.');
 
         var setter = options.setter || key,
             value  = this.solve(key, options);
