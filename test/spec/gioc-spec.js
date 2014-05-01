@@ -16,10 +16,10 @@ console.log('-------------');
 
         it('should contain known methods.', function() {
             var gioc = new Gioc();
-            var methods = ['map', 'solve', 'prepare', 'configure', 'build', 
-                           'wire', 'inject', 'post', 'mapped', 
+            var methods = ['map', 'solve', 'prepare', 'configure', 'build',
+                           'wire', 'inject', 'post', 'mapped',
                            'solveDependencies', 'error', 'log',
-                           'addSolver', 'addPost', 'addProvider', 
+                           'addSolver', 'addPost', 'addProvider',
                            'resetGraph', 'extend'
                            ];
             methods.map(function(method){
@@ -55,16 +55,16 @@ console.log('-------------');
         });
 
         it('extend should respect default values', function(){
-            var gioc = new Gioc;
+            var gioc = new Gioc();
             var options = {age:23};
             var defaults = {age:0, name:'goliat'};
             var output = gioc.extend('key', {}, defaults, options);
             var expected = {age:23, name:'goliat'};
             expect(output).toMatchObject(expected);
-        })
+        });
 
         it('factories should have gioc instance scope', function(){
-             var gioc = new Gioc();
+            var gioc = new Gioc();
             gioc.map('factory', function(){
                 return this;
             });
@@ -73,14 +73,13 @@ console.log('-------------');
 
         it('we can force a key to solve as a literal value',function(){
             var factory = function(){return 23;};
-            var gioc = new Gioc;
+            var gioc = new Gioc();
             gioc.map('factory', factory);
             expect(gioc.solve('factory')).toBe(23);
 
             var config = {};
             config[gioc.factoryKey] = false;
             expect(gioc.solve('factory', config)).toMatchObject(factory);
-
         });
     });
 
@@ -88,27 +87,27 @@ console.log('-------------');
         var gioc;
 
         beforeEach(function(){
-            
+
             gioc = new Gioc();
         });
 
         it('should have a *static* config object', function(){
-            
+
             expect(Gioc.config).toBeTruthy();
         });
 
         it('config object should have an defaults prop', function(){
-            
+
             expect(Gioc.config.defaults).toBeTruthy();
         });
 
         it('config object should have an attributes prop', function(){
-            
+
             expect(Gioc.config.attributes).toBeTruthy();
         });
 
         it('defaults and attributes should be equal length', function(){
-            
+
             expect(Gioc.config.attributes).toMatchLengthOf(Gioc.config.defaults);
         });
 
@@ -174,7 +173,7 @@ console.log('-------------');
     describe('Gioc', function(){
         var gioc;
         beforeEach(function(){
-            gioc = new Gioc;
+            gioc = new Gioc();
         });
         it('should have a default editors, resetGraph',function(){
             expect(gioc.solvers).toHaveLength(2);
@@ -243,13 +242,13 @@ console.log('-------------');
             gioc.configure();
             var litconf = {};
             litconf[gioc.factoryKey] = false;
-            
+
             gioc.map('User', User, litconf);
-            
+
             gioc.map('Ajax', Ajax, litconf);
 
             gioc.map('Sync', Sync, litconf);
-            
+
             gioc.map('ajax', function(){
                 var Ajax = this.solve('Ajax');
                 return new Ajax();
@@ -257,18 +256,18 @@ console.log('-------------');
 
             gioc.map('sync', function(){
                 var Sync = gioc.solve('Sync');
-                return new Sync;
+                return new Sync();
             });
 
             gioc.map('userid', 12345);
             gioc.map('created', 1386667593, { modifier:function(unix){
                 return new Date(unix * 1000);
             }});
-            
+
             gioc.map('user', function(first, last, age){
                 var User = this.solve('User');
                 return new User(first, last, age);
-            });        
+            });
         });
 
         it('should apply modifiers', function(){
@@ -279,7 +278,7 @@ console.log('-------------');
         it('should solve dependencies',function(){
             var afterSpy = sinon.spy();
 
-            var user = gioc.solve('user', { args:['goliat', 'one', 32], 
+            var user = gioc.solve('user', { args:['goliat', 'one', 32],
                                             deps:['userid','jquery', 'created',{
                                                 id:'sync',
                                                 options:{
