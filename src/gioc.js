@@ -327,13 +327,16 @@ define('gioc', function() {
     /**
      * Checks to see if *key* is currently
      * mapped.
+     * TODO: If we add external solvers, then
+     *       this check might be outdated. We
+     *       need to add solver+mapper!
      *
      * @param  {String} key Definition id.
      * @return {Boolean}    Does a definition
      *                      with this key exist?
      */
     Gioc.prototype.mapped = function(key){
-        return (key in this.beans);
+        return  this.beans.hasOwnProperty(key);
     };
 
     /**
