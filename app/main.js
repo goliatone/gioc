@@ -8,7 +8,7 @@ requirejs.config({
 });
 
 define(['gioc', 'jquery'], function (Gioc, $) {
-    console.log('Loading');
+    console.log('Loading', $);
 
     var Ajax = function(){};
 
@@ -24,13 +24,13 @@ define(['gioc', 'jquery'], function (Gioc, $) {
     };
 
     var gioc = new Gioc();
-    gioc.map('User', User,{});
+    gioc.map('User', User, {});
 
     /*
      * Try to add a dependency solver based on requirejs
      * We might have to keep track of dependencies, and only
      * execute next solver if the previous one failed, so we
-     * might want to modify the array as we go, to remove the 
+     * might want to modify the array as we go, to remove the
      * key from the next loop.
      */
     gioc.addSolver('deps', function(key, target, deps){
@@ -51,17 +51,18 @@ define(['gioc', 'jquery'], function (Gioc, $) {
                     //TODO: We should treat this as an array
                     //TODO: This should be the 'initialize' phase!
                     // if(this.postKey in options) options[this.postKey].apply(scope, options[this.postArgs]);
-                } else console.log("**********---------************ ", bean, target[bean])
-            }, this);           
+                } else console.log("**********---------************ ", bean, target[bean]);
+            }, this);
         }catch(e){}
     });
 
     gioc.map('ajax', function(){return new Ajax();},{
         // deps:['user']
     });
+
     gioc.map('sync', function(options){
         return new Sync();
-    },{deps:['ajax']});
+    }, {deps:['ajax']});
 
     gioc.map('userid', 123456789, {
         modifier:function(id){
