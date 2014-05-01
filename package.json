@@ -24,6 +24,7 @@
     "matchdep": "~0.1.1",
     "grunt-google-cdn": "~0.1.1",
     "markdown": "~0.4.0",
-    "sinon": "~1.7.2"
+    "sinon": "~1.7.2",
+    "grunt-release-it":"0.0.1"
   }
 }
