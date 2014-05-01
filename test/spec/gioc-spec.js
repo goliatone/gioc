@@ -18,7 +18,7 @@ console.log('-------------');
             var gioc = new Gioc();
             var methods = ['map', 'solve', 'prepare', 'configure', 'build',
                            'wire', 'inject', 'post', 'mapped',
-                           'solveDependencies', 'error', 'log',
+                           'solveDependencies', 'error',
                            'addSolver', 'addPost', 'addProvider',
                            'resetGraph', 'extend'
                            ];
@@ -113,7 +113,7 @@ console.log('-------------');
 
         it('should create properties in config.attributes',function(){
             Gioc.config.attributes.map(function(key){
-                expect(gioc[key]).toBeTruthy();
+                expect(typeof gioc[key]).toBeTruthy();
             });
         });
 
