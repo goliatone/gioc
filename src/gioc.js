@@ -110,6 +110,9 @@ define('gioc', function() {
             strictErrors: false
         }
     };
+    
+    Gioc.VERSION = '0.2.0';
+    
 ////////////////////////////////////////
 /// PUBLIC METHODS
 ////////////////////////////////////////
