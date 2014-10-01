@@ -4,7 +4,7 @@
 /*global expect:true */
 /*global beforeEach:true */
 /* jshint strict: false */
-define(['gioc', 'jquery'], function(Gioc, $) {
+define(['gioc'], function(Gioc) {
 console.log('-------------');
     describe('Gioc...', function() {
 
