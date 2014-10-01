@@ -278,15 +278,16 @@ console.log('-------------');
         it('should solve dependencies',function(){
             var afterSpy = sinon.spy();
 
-            var user = gioc.solve('user', { args:['goliat', 'one', 32],
-                                            deps:['userid','jquery', 'created',{
-                                                id:'sync',
-                                                options:{
-                                                    props:{url:'goliatone.com'},
-                                                    after:afterSpy,
-                                                    pargs:['23', 'argument']
-                                                }
-                                            }]
+            var user = gioc.solve('user', {
+                args:['goliat', 'one', 32],
+                deps:['userid', 'created',{
+                    id:'sync',
+                    options:{
+                        props:{url:'goliatone.com'},
+                        after:afterSpy,
+                        pargs:['23', 'argument']
+                    }
+                }]
             });
             expect(user).toHaveProperties('first', 'last', 'age', 'userid', 'sync', 'created');
             expect(user.last).toBe('one');
@@ -299,6 +300,10 @@ console.log('-------------');
 
             expect(afterSpy).toHaveBeenCalled();
             expect(afterSpy).toHaveBeenCalledWith('23', 'argument');
+        });
+
+        it('addSolver should handle mappers', function(){
+
         });
     });
 });
