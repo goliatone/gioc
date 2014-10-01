@@ -37,7 +37,7 @@ define(['gioc', 'jquery'], function (Gioc, $) {
         console.log('========>> ', target);
         try{
             deps.map(function(bean){
-                console.log('desp for ', bean);
+                console.warn('desp for ', bean);
                 if(!target[bean]){
                     if(typeof bean === 'string')
                         bean = {id:bean, options:{setter:bean}};
@@ -47,7 +47,7 @@ define(['gioc', 'jquery'], function (Gioc, $) {
                         value = require(key);
                     if(typeof setter === 'function') setter.call(target, value, key);
                     else if( typeof setter === 'string') target[setter] = value;
-
+                    console.log('value', value)
                     //TODO: We should treat this as an array
                     //TODO: This should be the 'initialize' phase!
                     // if(this.postKey in options) options[this.postKey].apply(scope, options[this.postArgs]);
