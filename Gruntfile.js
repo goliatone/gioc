@@ -14,7 +14,7 @@ module.exports = function (grunt) {
         src: 'src',
         dist: 'dist',
         lib:'lib',
-        example:'example'
+        example:'examples'
     };
 
     try {
@@ -49,7 +49,7 @@ module.exports = function (grunt) {
                             lrSnippet,
                             mountFolder(connect, '.tmp'),
                             mountFolder(connect, config.src),
-                            mountFolder(connect, config.libs),
+                            mountFolder(connect, config.lib),
                             mountFolder(connect, config.example)
                         ];
                     }
