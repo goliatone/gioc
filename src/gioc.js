@@ -10,9 +10,9 @@
  *     and work in the same way, then have one method
  *     that creates dynamically them.
  *
- * TODO: prepare and post could be one method, also 
+ * TODO: prepare and post could be one method, also
  *       dynamically attached.
- * 
+ *
  * Copyright (c) 2013 goliatone
  * Licensed under the MIT license.
  */
@@ -24,20 +24,42 @@ define('gioc', function() {
 /// PRIVATE METHODS
 ////////////////////////////////////////
 
-    var _slice = slice = Array.prototype.slice;
+    var _slice = Array.prototype.slice;
 
     var _isFactory = function(bean){
         if(this.factoryKey in bean.config) return bean.config[this.factoryKey];
-        return typeof bean.load === 'function';      
+        return typeof bean.load === 'function';
+    };
+
+    /**
+     * Shim console, make sure that if no console
+     * available calls do not generate errors.
+     * @return {Object} Console shim.
+     */
+    var _shimConsole = function(){
+        var empty = {},
+            con   = {},
+            noop  = function() {},
+            properties = 'memory'.split(','),
+            methods = ('assert,clear,count,debug,dir,dirxml,error,exception,group,' +
+                       'groupCollapsed,groupEnd,info,log,markTimeline,profile,profileEnd,' +
+                       'table,time,timeEnd,timeStamp,trace,warn').split(','),
+            prop,
+            method;
+
+        while (method = methods.pop())    con[method] = noop;
+        while (prop   = properties.pop()) con[prop]   = empty;
+
+        return con;
     };
 
 ////////////////////////////////////////
 /// CONSTRUCTOR
 ////////////////////////////////////////
-    
+
     /**
      * Gioc constructor.
-     * 
+     *
      * @param  {Object} config Optional config object.
      */
     var Gioc = function Gioc(config){
@@ -47,7 +69,7 @@ define('gioc', function() {
 
         this.solvers = {};
         this.editors = [];
-        
+
         this.providers = [];
 
         this.configure(config);
@@ -57,8 +79,8 @@ define('gioc', function() {
 
         this.addSolver(this.propKey, this.extend);
         this.addSolver(this.depsKey, this.solveDependencies);
-        
-        //TODO: Should addPost and addProvider have the 
+
+        //TODO: Should addPost and addProvider have the
         //same signature as addSolver?
         this.addPost(this.resetGraph);
 
@@ -73,19 +95,32 @@ define('gioc', function() {
     //      then we cant reset. REMOVE STATIC or have
     //      a default src.
     Gioc.config = {
-        attributes:['depsKey', 'propKey', 'postKey', 'postArgs', 'modKey', 'factoryKey'],
+        attributes:[
+            'depsKey', 'propKey', 'postKey',
+            'postArgs', 'modKey', 'factoryKey',
+            'strictErrors'
+        ],
         defaults:{
             depsKey: 'deps',
             propKey: 'props',
             postKey: 'after',
-            modKey: 'modifier',
+            modKey:   'modifier',
             postArgs: 'pargs',
-            factoryKey:'construct'
+            factoryKey:'construct',
+            strictErrors: false
         }
     };
+    
+    Gioc.VERSION = '0.2.0';
+    
 ////////////////////////////////////////
 /// PUBLIC METHODS
 ////////////////////////////////////////
+    /**
+     * Handles configuration.
+     * @param  {Object} config Configuration object
+     * @return {this}
+     */
     Gioc.prototype.configure = function(config){
         //TODO: This should be configurable.
         /* Default supported directives:
@@ -97,18 +132,21 @@ define('gioc', function() {
         Gioc.config.attributes.map(function(ckey){
             this[ckey] = config[ckey];
         }, this);
+
+        return this;
     };
+
     /**
      * Stores a definition, with configuration
      * options, to be *solved* later.
      * The payload can be either a literal value
      * or a factory method.
-     *    
+     *
      * @param  {String} key      String ID.
      * @param  {Object|Function} payload Value to be map.
      * @param  {Object} config   Options for current mapping.
      * @return {Gioc}
-     */ 
+     */
     Gioc.prototype.map = function(key, payload, config){
         //Store basic information of our payload.
         var bean = {key:key, load:payload, config:(config || {})};
@@ -118,7 +156,7 @@ define('gioc', function() {
         bean.isFactory = _isFactory.call(this, bean);
 
         //TODO: How do we want to handle collision? We are overriding.
-        if(this.mapped(key)) this.log(key, 'key is already mapped, overriding.');
+        if(this.mapped(key)) this.logger.warn(key, 'key is already mapped, overriding.');
 
         this.beans[key] = bean;
 
@@ -127,17 +165,17 @@ define('gioc', function() {
 
     /**
      * Solve for the provided *key*, it returns a value
-     * and solves all dependencies, etc. 
+     * and solves all dependencies, etc.
      * The cycle to solve for a key is the
      * result of runing the methods in order
      * `prepare` as a pre process, `build` to
      * generate the payload, `wire` to solve
      * dependencies, and `post` as a post process.
-     * 
+     *
      * @param  {String} key      String ID we are solving
      *                           for
      * @param  {Object} options   Options object.
-     * @return {Object|undefined} Solved value 
+     * @return {Object|undefined} Solved value
      *                            for the given key.
      */
     Gioc.prototype.solve = function(key, options){
@@ -147,11 +185,11 @@ define('gioc', function() {
 
         var value  = null,
             bean   = this.beans[key],
-            config = {};        
+            config = {};
         //pre-process
         this.prepare(key, config, bean.config, options);
 
-        this.log('==> solve, generated config ', config);
+        this.logger.log('==> solve, generated config ', config);
         //build our value.
         value = this.build(key, config);
 
@@ -168,10 +206,10 @@ define('gioc', function() {
      * Pre process to consolidate the configuration
      * object for a given key.
      * It will loop over all providers in order the order
-     * they were added and call the provider with the 
+     * they were added and call the provider with the
      * Gioc instance as scope.
      * The default provider is the `extend` method.
-     * 
+     *
      * @param  {String} key      String ID we are solving
      *                           for
      * @param  {Object} target   Resulting object.
@@ -190,11 +228,11 @@ define('gioc', function() {
 
     /**
      * Retrieve the payload value for the given *key*.
-     * If the payload is a literal value, we just return 
+     * If the payload is a literal value, we just return
      * it without any further steps. If the payload is a
      * function then we execute it with the **scope** and
      * **args** provided in the config object.
-     * 
+     *
      * @param  {String} key      String ID we are solving
      *                           for
      * @param  {Object} options  Conf object passed in the
@@ -210,14 +248,17 @@ define('gioc', function() {
             value  = bean.load;
 
         //TODO: REFACTOR, CLEAN UP!!
-        if(options && this.factoryKey in options && !options[this.factoryKey]) return value;
+        if(options &&
+           this.factoryKey in options &&
+           !options[this.factoryKey]) return value;
+
         if(!bean.construct) return value;
 
         var config = this.extend(key, {scope:this}, bean.config, options),
             args   = config.args,
             scope  = config.scope;
 
-        value = value.apply(scope, args);           
+        value = value.apply(scope, args);
 
         return value;
     };
@@ -227,27 +268,29 @@ define('gioc', function() {
      * and for any of its keys that has a related solver
      * it will apply the solver method to the
      * target.
-     * Meant to be overriden with use.
+     * Meant to be overridden with use.
      * Default solvers are the `extend` method
      * for the key `props` and `solveDependencies`
      * for the `deps` key.
-     * 
+     *
      * @param  {String} key      String ID we are solving
      *                           for
      * @param  {Primitive|Object} target Solved value for the
      *                                   provided key.
      * @param  {Object} config  Configuration object.
-     * @return {[type]}        [description]
+     * @return {Primitive|object}        Solved value.
      */
     Gioc.prototype.wire = function(key, target, config){
         config = config || {};
-        
+
         //We have a literal value. We might want to modify it?
         if(typeof target !== 'object' && this.modKey in config)
             return config[this.modKey](target);
 
-        //solve is the intersection between all keys in the 
-        //config object and the solvers.
+        /*
+         * solve is the intersection between all keys in the
+         * config object and the solvers.
+         */
         var keys  = Object.keys(this.solvers);
         var solve = Object.keys(config).filter(function(k){ return keys.indexOf(k) !== -1;});
         solve.map(function(ckey){
@@ -255,31 +298,30 @@ define('gioc', function() {
                 solver.call(this, key, target, config[ckey]);
             }, this);
         }, this);
-       
+
         return target;
     };
 
     /**
      * Injects a dependency into the provided `scope`
-     *     
-     * @param  {String} key      String ID we are solving
-     *                           for
-     * @param  {Object} scope   [description]
-     * @param  {[type]} options [description]
-     * @return {[type]}         [description]
+     *
+     * @param  {String} key     String ID we are solving
+     *                          for
+     * @param  {Object} scope   Target to be injected
+     * @param  {Object} options Options object.
+     * @return {this}
      */
     Gioc.prototype.inject = function (key, scope, options) {
-        //TODO: We should want to handle this differently
-        if(! this.mapped(key)) return this;
+        if(! this.mapped(key)) return this.logger.warn(key, 'Provided key is not mapped.');
 
         var setter = options.setter || key,
             value  = this.solve(key, options);
 
-        //It could be that we were unable to solve for key, how do 
+        //It could be that we were unable to solve for key, how do
         //we handle it? Do we break the whole chain?
         if(value === undefined) return this;
 
-        if(typeof setter === 'function') setter.call(scope, value, key);
+        if( typeof setter === 'function') setter.call(scope, value, key);
         else if( typeof setter === 'string') scope[setter] = value;
 
         //TODO: We should treat this as an array
@@ -299,9 +341,9 @@ define('gioc', function() {
      * @return {Gioc}
      */
     Gioc.prototype.post = function(key, target, options){
-        this.log('post ', this.editors);
+        this.logger.log('post ', this.editors);
         (this.editors).map(function(editor){
-            this.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
+            this.logger.log('editor ', editor, ' key ', key, ' target ', target, ' options ', options);
             editor.call(this, key, target, options);
         }, this);
         return this;
@@ -310,81 +352,114 @@ define('gioc', function() {
     /**
      * Checks to see if *key* is currently
      * mapped.
-     * 
+     * TODO: If we add external solvers, then
+     *       this check might be outdated. We
+     *       need to add solver+mapper!
+     *
      * @param  {String} key Definition id.
      * @return {Boolean}    Does a definition
      *                      with this key exist?
      */
     Gioc.prototype.mapped = function(key){
-        return (key in this.beans);
+        return  this.beans.hasOwnProperty(key);
     };
 
     /**
      * Solve an array of dependencies.
-     * 
+     *
      * @param  {Object} scope    Scope to which dependencies
      *                           will be applied to.
-     * @param  {[type]} mappings Array contained deps. 
+     * @param  {[type]} mappings Array contained deps.
      *                           definitions
-     * @return {Gioc}
+     * @return {this}
      */
     Gioc.prototype.solveDependencies = function(key, scope, mappings){
-        (this.graph = this.graph || {}) && (this.graph[key]=key);
+
+        (this.graph = this.graph || {}) && ( this.graph[key] = key );
+
         /*
          * Try to add a dependency solver based on requirejs
          * We might have to keep track of dependencies, and only
          * execute next solver if the previous one failed, so we
-         * might want to modify the array as we go, to remove the 
+         * might want to modify the array as we go, to remove the
          * key from the next loop.
          * We should use `every` or `some` instead of map.
          */
         mappings.map(function(bean){
-            //Normalize bean def, if string, we ride on defaults.                
-            if(typeof bean === 'string') 
-                bean = {id:bean, options:{setter:bean}};
+            //Normalize bean def, if string, we ride on defaults.
+            if(typeof bean === 'string') {
+                bean = {id: bean, options: {setter: bean}};
+            }
 
             //Catch circular dependency
-            if(bean.id in this.graph) 
-                return this.error(key, 'ERROR');
-            
+            if(bean.id in this.graph){
+                return this.error(key, 'ERROR: Circular Dependency detected.');
+            }
+
             //store current bean id for CD.
             this.graph[bean.id] = key;
+
             //We should try catch this.
             this.inject(bean.id, scope, bean.options);
+
             //Bean resolved, move on.
             delete this.graph[bean.id];
+
         }, this);
-        this.log(key, this.graph)
+
+        this.logger.log(key, this.graph);
+
         return this;
     };
 
+    /**
+     * Error handler. If `strictErrors` is true
+     * it will throw the error. Else it will be
+     * handled by `logger`.
+     * @param  {String} key     Error key
+     * @param  {String} message Message
+     * @return {void}
+     */
     Gioc.prototype.error = function(key, message){
-        throw new Error(key, message);
+        if(this.strictErrors === true) throw new Error(key, message);
+        this.logger.error(key, message);
     };
 
-    Gioc.prototype.log = function(key, message){
-        console.log.apply(console, arguments);
-        return this;
-    };
-
+    /**
+     * Solvers are functions that handle
+     * specific `key`s in the configuration
+     * bean.
+     * We add solvers by key.
+     *
+     * @param {String} key    Solver ID
+     * @param {Function} solver Solver implementation.
+     */
     Gioc.prototype.addSolver = function(key, solver){
         (this.solvers[key] || (this.solvers[key] = [])).push(solver);
     };
 
+    /**
+     * Add a post solver function.
+     * @param {Function} editor Post editor
+     */
     Gioc.prototype.addPost = function(editor){
-        if(this.editors.indexOf(editor) === -1)
+        if(this.editors.indexOf(editor) === -1){
             this.editors.push(editor);
+        }
+
         return this;
     };
 
     Gioc.prototype.addProvider = function(provider){
-        if(this.providers.indexOf(provider) === -1)
+        if(this.providers.indexOf(provider) === -1){
             this.providers.push(provider);
+        }
+
         return this;
     };
 
     Gioc.prototype.resetGraph = function(key, target, options){
-        this.log('=== DELETE GRAPH')
+        this.logger.log('=== DELETE GRAPH');
         if(key in this.graph) delete this.graph[key];
     };
 
@@ -404,12 +479,18 @@ define('gioc', function() {
                     if (d.get) {
                         target.__defineGetter__(k, d.get);
                         if (d.set) target.__defineSetter__(k, d.set);
-                    } else if (target !== d.value) target[k] = d.value;                
+                    } else if (target !== d.value) target[k] = d.value;
                 });
             }
         }
         return target;
     };
+
+    /**
+     * Stub method for logger.
+     * By default is mapped to console.
+     */
+    Gioc.prototype.logger = console || _shimConsole();
 
     return Gioc;
 });
